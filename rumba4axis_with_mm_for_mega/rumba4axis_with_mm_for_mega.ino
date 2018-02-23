@@ -9,7 +9,7 @@
 #include "config4axis.h"
 
 // for debug 
-#define VERBOSE              (1)  // add to get a lot more serial output.  
+//#define VERBOSE              (1)  // add to get a lot more serial output.  
 
 //------------------------------------------------------------------------------
 // STRUCTS
@@ -74,7 +74,9 @@ static volatile uint8_t U_end_dir_outbit ;
 
 static uint8_t prev_X_end_outbit ; // for debuging (used in main loop)
 
-Segment *exec_segment = NULL ;
+static volatile int32_t pX , pY, pZ, pU ; // store the real position of each motor (updated during stepping) (in micro steps)
+
+volatile Segment *exec_segment = NULL ;
 volatile uint8_t test1; // just to test interrupts (debug purpose)
 volatile uint8_t test2; // just to test interrupts
 volatile uint8_t test3; // just to test interrupts
@@ -94,11 +96,16 @@ float feed_rate= MAX_FEEDRATE / 4 ;  // mm/min (value per default)
 int heat_rate = 0 ;
 boolean heat_enabled = false ; // default disabled
 
-float steps_per_mmX = 1.0 * X_STEP_PER_TOUR * X_MICROPAS / X_MM_PER_TOUR ;
-float steps_per_mmY = 1.0 * Y_STEP_PER_TOUR * Y_MICROPAS / Y_MM_PER_TOUR ; 
-float steps_per_mmZ = 1.0 * Z_STEP_PER_TOUR * Z_MICROPAS / Z_MM_PER_TOUR ; 
-float steps_per_mmU = 1.0 * U_STEP_PER_TOUR * U_MICROPAS / U_MM_PER_TOUR ; 
+float steps_per_mmX ;
+float steps_per_mmY ; 
+float steps_per_mmZ ; 
+float steps_per_mmU ; 
  
+float mm_per_stepX ;
+float mm_per_stepY ;
+float mm_per_stepZ ;
+float mm_per_stepU ;
+
 float mm_per_stepX2 ;
 float mm_per_stepY2 ;
 float mm_per_stepZ2 ;
@@ -215,6 +222,7 @@ int8_t get_prev_segment(int8_t i) {
  */
 ISR(TIMER1_COMPA_vect) {
   if (busy) { return ; } 
+  blink_led() ;
   // Set the direction pins a couple of nanoseconds before we step the steppers
   //DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (dir_outbits & DIRECTION_MASK);
   X_DIRECTION_PORT = (X_DIRECTION_PORT & ~X_DIRECTION_MASK) | (X_dir_outbit) ;       // only 1 bit is set in the byte (done when segment is filled)         
@@ -319,21 +327,25 @@ ISR(TIMER1_COMPA_vect) {
     if(overX >= steps_in_executed_segment) {
         X_step_outbit = (1<<X_STEP_BIT);
         overX -= steps_in_executed_segment ;
+        pX += ( X_dir_outbit ? 1 : -1 ) ;
     } else { X_step_outbit = 0 ;} ;
     overY += exec_segment->absdeltaY;
     if(overY >= steps_in_executed_segment) {
         Y_step_outbit = (1<<Y_STEP_BIT) ;
         overY -= steps_in_executed_segment ;
+        pY += ( Y_dir_outbit ? 1 : -1 ) ;
     } else { Y_step_outbit = 0 ;} ;
     overX += exec_segment->absdeltaZ;
     if(overZ >= steps_in_executed_segment) {
         Z_step_outbit = (1<<Z_STEP_BIT);
         overZ -= steps_in_executed_segment ;
+        pZ += ( Z_dir_outbit ? 1 : -1 ) ;
     } else { Z_step_outbit = 0 ;} ;
     overU += exec_segment->absdeltaU;
     if(overU >= steps_in_executed_segment) {
         U_step_outbit |= (1<<U_STEP_BIT);
         overU -= steps_in_executed_segment ;
+        pU += ( U_dir_outbit ? 1 : -1 ) ;
     } else { U_step_outbit = 0 ;} ;
     steps_left-- ;
     
@@ -447,18 +459,17 @@ void line(float n0,float n1,float n2,float n3 ) {
   if (new_seg.steps_count < new_seg.absdeltaU) new_seg.steps_count= new_seg.absdeltaU ; 
 
   if ( new_seg.steps_count == 0 ) return; 
-  if ( heat_enable) {                         // store heat rate in segment
+  if ( heat_enabled) {                         // store heat rate in segment
     new_seg.segment_heat_rate = heat_rate ;
   } else {
     new_seg.segment_heat_rate = 0 ;
   }
 
   // calculate the max distance for XY and ZU axis (4 axis foam cutter)
-  float distance_mm = new_seg.absdeltaX * new_seg.absdeltaX * mm_per_stepX2 + new_seg.absdeltaY * new_seg.absdeltaY * mm_per_stepY2;  
-  float distanceZU = new_seg.absdeltaZ * new_seg.absdeltaZ * mm_per_stepZ2 + new_seg.absdeltaU * new_seg.absdeltaU * mm_per_stepU2;  
+  float distance_mm =  ((float) new_seg.absdeltaX) * ((float) new_seg.absdeltaX )* mm_per_stepX2 + ((float)new_seg.absdeltaY) * ((float) new_seg.absdeltaY) * mm_per_stepY2;  
+  float distanceZU = ((float) new_seg.absdeltaZ) * ((float)new_seg.absdeltaZ) * mm_per_stepZ2 + ((float)new_seg.absdeltaU) * ((float)new_seg.absdeltaU) * mm_per_stepU2;  
   if (distanceZU > distance_mm ) distance_mm = distanceZU ; // keep max of both distances
   distance_mm = sqrt( distance_mm) ; 
-  
   // calculate the number of cycles between 2 steps (based on the distance, the feedrate and the max number of steps in the segment)
   // store the value for the timer and the prescaler in the segment buffer.
   // time for the whole segment in min = distance_mm / feedrate (mm/min) = time for steps_count
@@ -563,14 +574,14 @@ void where() {
  * display helpful information
  */
 void help() {
-  Serial.print(F("GcodeCNCDemo4AxisV1 "));
+  Serial.print(F("Grbl v0.10 ['$' for help]"));
   Serial.println(VERSION);
   Serial.println(F("Commands:"));
-  Serial.println(F("G00/G01 [X/Y/Z/U/V/W(steps)] [F(feedrate)]; - linear move"));
+  Serial.println(F("G00/G01 [X/Y/Z/U (steps)] [F(feedrate)]; - linear move"));
   Serial.println(F("G04 P[seconds]; - delay"));
   Serial.println(F("G90; - absolute mode"));
   Serial.println(F("G91; - relative mode"));
-  Serial.println(F("G92 [X/Y/Z/U/V/W(steps)]; - change logical position"));
+  Serial.println(F("G92 [X/Y/Z/U(steps)]; - change logical position"));
   Serial.println(F("M3; - ensable heat"));
   Serial.println(F("M5; - disable heat"));
   Serial.println(F("M17; - enable motors"));
@@ -595,7 +606,7 @@ void processCommand() {
 
   int cmd = parsenumber('G',-1);
 #ifdef VERBOSE
-  Serial.print(F("Cmd= "));  Serial.println(cmd);
+//  Serial.print(F("Cmd= "));  Serial.println(cmd);
 #endif
   switch(cmd) {
     case  0:
@@ -652,7 +663,8 @@ void processCommand() {
   case 17:  {wait_all_segments_executed() ; motor_enable(); break;  } // M17 (enable motor)
   case 18:  {wait_all_segments_executed() ; motor_disable();  break; } // M18 (disable motor)
   case 100:  help();  break;                                           // M100 (send help message on serial port)
-  case 114:  {wait_all_segments_executed() ;where();  break; }         // M114 (send the current position)
+  case 114:  {wait_all_segments_executed() ;where();  break; }         // M114 (send the current logical position)
+  
   default:  break;
   return ;
   }
@@ -663,7 +675,11 @@ void processCommand() {
     wait_all_segments_executed() ;
     heatrate(parsenumber('S',heat_rate)); // update heatrate if S is present
   }
-  
+  if (buffer[0] == '$') {
+    if (buffer[1] == '\n') {
+      help() ;
+    }  
+  } 
 }
 
 
@@ -672,7 +688,7 @@ void processCommand() {
  */
 void ready() {
   sofar=0;  // clear input buffer
-  Serial.print(F(">"));  // signal ready to receive input
+  //Serial.print(F(">"));  // signal ready to receive input
 }
 
 
@@ -753,7 +769,8 @@ ISR(INT2_vect){          // use for Endstop on INT (U axis)
  * First thing this machine does on startup.  Runs only once.
  */
 void setup() {
-  Serial.begin(BAUD);  // open coms  
+  Serial.begin(BAUD);  // open coms 
+  pinMode(13, OUTPUT); // set led as output 
   X_STEP_DDR |= X_STEP_MASK;   // pout port pin as output
   Y_STEP_DDR |= Y_STEP_MASK;
   Z_STEP_DDR |= Z_STEP_MASK;
@@ -782,13 +799,24 @@ void setup() {
   
   TCCR1A = 0;                   // set entire TCCR1A register to 0
   TCCR1B = (1 << WGM12) | (1<<CS10)  ;       // set entire TCCR1B register to 0 EXCEPT that we apply CTC MODE (continue running on comparator) and prescaller = 1
+
+  steps_per_mmX = 1.0 * X_STEP_PER_TOUR * X_MICROPAS / ((float) X_MM_PER_TOUR) ;
+  steps_per_mmY = 1.0 * Y_STEP_PER_TOUR * Y_MICROPAS / ((float) Y_MM_PER_TOUR) ; 
+  steps_per_mmZ = 1.0 * Z_STEP_PER_TOUR * Z_MICROPAS / ((float) Z_MM_PER_TOUR) ; 
+  steps_per_mmU = 1.0 * U_STEP_PER_TOUR * U_MICROPAS / ((float) U_MM_PER_TOUR) ; 
+    
+  mm_per_stepX2 = 1.0/ ( steps_per_mmX * steps_per_mmX ) ;   // calculated once to increase performance
+  mm_per_stepY2 = 1.0/ ( steps_per_mmY * steps_per_mmY ) ;
+  mm_per_stepZ2 = 1.0/ ( steps_per_mmZ * steps_per_mmZ ) ;
+  mm_per_stepU2 = 1.0/ ( steps_per_mmU * steps_per_mmU ) ;
+    
+  mm_per_stepX = 1/ ( steps_per_mmX ) ;   // calculated once to increase performance
+  mm_per_stepY = 1/ ( steps_per_mmY ) ;
+  mm_per_stepZ = 1/ ( steps_per_mmZ ) ;
+  mm_per_stepU = 1/ ( steps_per_mmU ) ;
   
-  mm_per_stepX2 = 1/ ( steps_per_mmX * steps_per_mmX ) ;
-  mm_per_stepY2 = 1/ ( steps_per_mmY * steps_per_mmY ) ;
-  mm_per_stepZ2 = 1/ ( steps_per_mmZ * steps_per_mmZ ) ;
-  mm_per_stepU2 = 1/ ( steps_per_mmU * steps_per_mmU ) ;
-  
-  help();  // say hello
+  Serial.println() ;
+  Serial.println ("Grbl v1.1f ['$' for help]");  // send some text like GRBL do (version is a dummy one)
   position(0,0,0,0);  // set staring position
   feedrate(200);  // set default speed
   ready();
@@ -807,32 +835,56 @@ void setup() {
   prev_X_end_outbit = X_end_outbit ;
 }
 
+void blink_led() {
+  
+  static uint32_t prev_millis ;
+  if (millis() > ( prev_millis + 500) ) {
+    digitalWrite( 13, digitalRead(13)   ? LOW : HIGH );
+    prev_millis = millis() ; 
+  }
+}
 
 /**
  * After setup() this machine will repeat loop() forever.
  */
 void loop() {
   // listen for serial commands
+  //static uint8_t countCar;
+  //static uint8_t prevCar;
   while(Serial.available() > 0) {  // if something is available
     char c=Serial.read();  // get it
-    Serial.print(c);  // repeat it back so I know you got the message
-    if( c != ' ' ) {  // skip spaces 
+    //countCar++ ;
+    //Serial.println(countCar) ;
+    //Serial.print(c);  // repeat it back so I know you got the message
+    if ( c == '?' ) {       // reply immediately to a ? with the current position of the stepper motors. format is <Idle,MPos:5.529,0.560,7.000,WPos:1.529,-5.440,-0.000>
+      Serial.print("<Idle|MPos:");
+      Serial.print( pX * mm_per_stepX , 3 );  Serial.print( ',' );   
+      Serial.print( pY * mm_per_stepX , 3 );  Serial.print( ',' );
+      Serial.print( pZ * mm_per_stepX , 3 );  Serial.print( ',' );
+      Serial.print( pU * mm_per_stepX , 3 );  Serial.print( "|FS:0,0" );
+      Serial.println(">");     // 
+    } else if( c == 0x18 ) {  // send reset sequence 
+      Serial.println() ;
+      Serial.println ("Grbl v1.1f ['$' for help]");  // send some text like GRBL do (version is a dummy one)
+      //Serial.println ("ok>") ;
+    } else if( c != ' ' ) {  // skip spaces 
       if(sofar<MAX_BUF-1) buffer[sofar++]=c;  // store it
     }
-    if(c=='\n') {
+    if(c=='\r') {
       // entire line received
       buffer[sofar]=0;  // end the buffer so string functions work right      
-      Serial.print(F("\r\n"));  // echo a return character for humans
-      Serial.println("Buffer=");
-      for(int i= 0 ; i<sofar ; i++) {
-        Serial.print( buffer[i] );
-      }
-      Serial.println(" ") ;
+      //Serial.print(F("\r\n"));  // echo a return character for humans
+      //Serial.println("Buffer=");
+      //for(int i= 0 ; i<sofar ; i++) {
+      //  Serial.print( buffer[i] );
+      //}
+      //Serial.println(" ") ;
       processCommand();  // do something with the command
-      Serial.print("OK") ; Serial.println(" ") ;
+      Serial.println("ok") ; 
       ready();
     }
   }
+//  blink_led() ;
 //  static uint32_t prev_millis ;
 //  if ( millis() > ( prev_millis + 500) ) {
 //    Serial.print("End X ") ;  Serial.println( X_END_MIN_PIN & (1<< X_END_MIN_BIT ) ) ;

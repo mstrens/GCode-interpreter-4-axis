@@ -48,7 +48,7 @@
 #define MAX_SEGMENTS         (100)    // can be increased to about 20 or more; 3 could be used just for testing purpose
 
 
-#define VERSION              (1)  // firmware version
+#define VERSION              (3)  // firmware version
 
 #define BAUD                 (115200)  // How fast is the Arduino talking?
 #define MAX_BUF              (64)  // What is the longest line Arduino can get?
