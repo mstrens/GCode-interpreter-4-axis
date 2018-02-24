@@ -233,54 +233,54 @@ ISR(TIMER1_COMPA_vect) {
   // in one direction, we don't take care of endstop to generate the pulse, in the other wel.
 #if (defined X_DIR_ENDSTOP_MIN) && ( X_DIR_ENDSTOP_MIN == REVERSE)
   if (X_dir_outbit ) {                           
-    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit & X_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit & X_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.  
+    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.  
   }
 #else
   if (X_dir_outbit ) {                           
-    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit & X_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.  
+    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.  
   } else {
-    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    X_STEP_PORT = (X_STEP_PORT & ~X_STEP_MASK) | ( X_step_outbit & X_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #endif
 #if (defined Y_DIR_ENDSTOP_MIN) && ( Y_DIR_ENDSTOP_MIN == REVERSE)  
   if (Y_dir_outbit ) {                           
-    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit & Y_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit & Y_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #else
   if (Y_dir_outbit ) {                           
-    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit & Y_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Y_STEP_PORT = (Y_STEP_PORT & ~Y_STEP_MASK) | ( Y_step_outbit & Y_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #endif
 #if (defined Z_DIR_ENDSTOP_MIN) && ( Z_DIR_ENDSTOP_MIN == REVERSE)
   if (Z_dir_outbit ) {
-    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit & Z_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit & Z_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #else
   if (Z_dir_outbit ) {
-    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit & Z_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    Z_STEP_PORT = (Z_STEP_PORT & ~Z_STEP_MASK) | ( Z_step_outbit & Z_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #endif
 #if (defined U_DIR_ENDSTOP_MIN) && ( U_DIR_ENDSTOP_MIN == REVERSE)
   if (U_dir_outbit ) {
-    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit & U_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit & U_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #else
   if (U_dir_outbit ) {
-    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit & U_end_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit) ;  // first time we come in, step_outbit = 0 and so there is no step.
   } else {
-    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
+    U_STEP_PORT = (U_STEP_PORT & ~U_STEP_MASK) | ( U_step_outbit & U_end_outbit ) ;  // first time we come in, step_outbit = 0 and so there is no step.
   }
 #endif  
   
@@ -327,25 +327,41 @@ ISR(TIMER1_COMPA_vect) {
     if(overX >= steps_in_executed_segment) {
         X_step_outbit = (1<<X_STEP_BIT);
         overX -= steps_in_executed_segment ;
+#if defined (X_ROTATION) && ( X_ROTATION == REVERSE)  
+        pX += ( X_dir_outbit ? -1 : 1 ) ;
+#else
         pX += ( X_dir_outbit ? 1 : -1 ) ;
+#endif        
     } else { X_step_outbit = 0 ;} ;
     overY += exec_segment->absdeltaY;
     if(overY >= steps_in_executed_segment) {
         Y_step_outbit = (1<<Y_STEP_BIT) ;
         overY -= steps_in_executed_segment ;
+#if defined (Y_ROTATION) && ( Y_ROTATION == REVERSE)  
+        pY += ( Y_dir_outbit ? -1 : 1 ) ;
+#else
         pY += ( Y_dir_outbit ? 1 : -1 ) ;
+#endif        
     } else { Y_step_outbit = 0 ;} ;
-    overX += exec_segment->absdeltaZ;
+    overZ += exec_segment->absdeltaZ;
     if(overZ >= steps_in_executed_segment) {
         Z_step_outbit = (1<<Z_STEP_BIT);
         overZ -= steps_in_executed_segment ;
+#if defined (Z_ROTATION) && ( Z_ROTATION == REVERSE)  
+        pZ += ( Z_dir_outbit ? -1 : 1 ) ;
+#else
         pZ += ( Z_dir_outbit ? 1 : -1 ) ;
+#endif        
     } else { Z_step_outbit = 0 ;} ;
     overU += exec_segment->absdeltaU;
     if(overU >= steps_in_executed_segment) {
         U_step_outbit |= (1<<U_STEP_BIT);
         overU -= steps_in_executed_segment ;
+#if defined (U_ROTATION) && ( U_ROTATION == REVERSE)  
+        pU += ( U_dir_outbit ? -1 : 1 ) ;
+#else
         pU += ( U_dir_outbit ? 1 : -1 ) ;
+#endif        
     } else { U_step_outbit = 0 ;} ;
     steps_left-- ;
     
@@ -415,7 +431,7 @@ void line(float n0,float n1,float n2,float n3 ) {
   _delta_steps = _target_steps - position_stepsX ;
   position_stepsX = _target_steps ;  
   new_seg.absdeltaX = labs(_delta_steps);
-#if defined (X_DIR_ENDSTOP_MIN) && ( X_DIR_ENDSTOP_MIN == REVERSE)  
+#if defined (X_ROTATION) && ( X_ROTATION == REVERSE)  
   new_seg.dirX = (_delta_steps < 0 ? HIGH : LOW) << X_DIRECTION_BIT;   // direction LOW = dir positif
 #else
   new_seg.dirX = (_delta_steps < 0 ? LOW : HIGH) << X_DIRECTION_BIT;   // direction LOW = dir negatif
@@ -425,7 +441,7 @@ void line(float n0,float n1,float n2,float n3 ) {
   _delta_steps = _target_steps - position_stepsY ;
   position_stepsY = _target_steps ;  
   new_seg.absdeltaY = labs(_delta_steps);
-#if defined (Y_DIR_ENDSTOP_MIN) && ( Y_DIR_ENDSTOP_MIN == REVERSE)  
+#if defined (Y_ROTATION) && ( Y_ROTATION == REVERSE)  
   new_seg.dirY = (_delta_steps < 0 ? HIGH : LOW) << Y_DIRECTION_BIT;   // direction LOW = dir positif
 #else
   new_seg.dirY = (_delta_steps < 0 ? LOW : HIGH) << Y_DIRECTION_BIT;   // direction LOW = dir negatif
@@ -435,7 +451,7 @@ void line(float n0,float n1,float n2,float n3 ) {
   _delta_steps = _target_steps - position_stepsZ ;
   position_stepsZ = _target_steps ;  
   new_seg.absdeltaZ = labs(_delta_steps);
-#if defined (Z_DIR_ENDSTOP_MIN) && ( Z_DIR_ENDSTOP_MIN == REVERSE)  
+#if defined (Z_ROTATION) && ( Z_ROTATION == REVERSE)  
   new_seg.dirZ = (_delta_steps < 0 ? HIGH : LOW) << Z_DIRECTION_BIT;   // direction LOW = dir positif
 #else
   new_seg.dirZ = (_delta_steps < 0 ? LOW : HIGH) << Z_DIRECTION_BIT;   // direction LOW = dir negatif
@@ -445,7 +461,7 @@ void line(float n0,float n1,float n2,float n3 ) {
   _delta_steps = _target_steps - position_stepsU ;
   position_stepsU = _target_steps ;  
   new_seg.absdeltaU = labs(_delta_steps);
-#if defined (U_DIR_ENDSTOP_MIN) && ( U_DIR_ENDSTOP_MIN == REVERSE)  
+#if defined (U_ROTATION) && ( U_ROTATION == REVERSE)  
   new_seg.dirU = (_delta_steps < 0 ? HIGH : LOW) << U_DIRECTION_BIT;   // direction LOW = dir positif
 #else
   new_seg.dirU = (_delta_steps < 0 ? LOW : HIGH) << U_DIRECTION_BIT;   // direction LOW = dir negatif
